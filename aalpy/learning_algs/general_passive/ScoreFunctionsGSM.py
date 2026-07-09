@@ -136,11 +136,10 @@ class ScoreCombinator(ScoreCalculation):
 
     @staticmethod
     def default_aggregate_compatibility(compatibility_iterable):
-        """Commits to the first value that is not inconclusive (== None). Accepts if in doubt."""
+        """Checks whether any of the individual tests rejects and accept otherwise."""
         for compat in compatibility_iterable:
-            if compat is None:
-                continue
-            return compat
+            if compat is False:
+                return False
         return True
 
     @staticmethod
