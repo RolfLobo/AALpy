@@ -158,8 +158,11 @@ class GsmNode:
         return self.prefix_access_pair[0]
 
     def resolve_unknown_prefix_output(self, value):
-        if self.get_prefix_output() is unknown_output:
+        current_prefix_output = self.get_prefix_output()
+        if current_prefix_output is unknown_output:
             self.prefix_access_pair = (self.get_prefix_input(), value)
+            return True
+        return current_prefix_output == value
 
     def get_prefix(self, include_output=True):
         node = self
@@ -423,18 +426,18 @@ class GsmNode:
                 node = t_info.target
             else:
                 # This should never happen
-                raise ValueError("Nondeterminism encountered for GSM with labeled_sequences. not supported")
+                raise ValueError("nondeterminism encountered for GSM with labeled_sequences. not supported")
             curr_node = node
 
         # set last output
-        curr_node.resolve_unknown_prefix_output(output)
+        outputs_agree = curr_node.resolve_unknown_prefix_output(output)
+        if not outputs_agree:
+            raise ValueError(f"nondeterminism encountered for GSM with labeled_sequences. not supported. conflicting outputs for prefix {curr_node.get_prefix(False)}: {curr_node.get_prefix_output()} vs {output}")
         pred = curr_node.predecessor
         if pred:
             transitions = pred.transitions[in_sym]
             if unknown_output in transitions:
                 transitions[output] = transitions.pop(unknown_output)
-            if output not in transitions:
-                raise ValueError("nondeterminism encountered for GSM with labeled_sequences. not supported")
 
     @staticmethod
     def createPTA(data, output_behavior, data_format=None) -> 'GsmNode':
@@ -455,7 +458,13 @@ class GsmNode:
             if output_behavior == "moore":
                 initial_output = data[0][0]
                 root_node.prefix_access_pair = (None, initial_output)
-                data = (d[1:] for d in data)
+                def trace_iterator(trace):
+                    it = iter(trace)
+                    first = next(it)
+                    if first != initial_output:
+                        raise ValueError(f"conflicting initial output {initial_output} vs {trace[0]}")
+                    yield from it
+                data = (trace_iterator(trace) for trace in data)
             for trace in data:
                 if data_format == "traces":
                     trace = (("step", t) for t in trace)
