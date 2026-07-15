@@ -406,7 +406,7 @@ def load_automaton_from_file(path, automaton_type, compute_prefixes=False):
     automaton = aut_type(initial_state, list(node_label_dict.values()))
     if automaton_type not in {'mc', 'sevpa', 'vpa'} and not automaton.is_input_complete():
         print('Warning: Loaded automaton is not input complete.')
-    if compute_prefixes and not automaton_type not in {'mc', 'sevpa', 'vpa'}:
+    if compute_prefixes and automaton_type not in {'mc', 'sevpa', 'vpa'}:
         for state in automaton.states:
             state.prefix = automaton.get_shortest_path(automaton.initial_state, state)
     return automaton
