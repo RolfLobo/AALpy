@@ -1,4 +1,4 @@
-from typing import Dict, Union
+from typing import Dict, Union, defaultdict
 
 from aalpy import DeterministicAutomaton, Onfsm, NDMooreMachine
 from aalpy.learning_algs.general_passive.GeneralizedStateMerging import run_GSM
