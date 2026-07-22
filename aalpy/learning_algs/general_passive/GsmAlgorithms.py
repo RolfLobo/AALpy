@@ -1,4 +1,4 @@
-from typing import Dict, Union
+from typing import Dict, Union, defaultdict
 
 from aalpy import DeterministicAutomaton, Onfsm, NDMooreMachine
 from aalpy.learning_algs.general_passive.GeneralizedStateMerging import run_GSM
@@ -32,9 +32,18 @@ def run_EDSM(data, automaton_type, input_completeness=None, print_info=True) -> 
     print_level = ProgressReport(1) if print_info else None
 
     def EDSM_score(part: Dict[GsmNode, GsmNode]):
-        nr_partitions = len(set(part.values()))
-        nr_merged = len(part)
-        return nr_merged - nr_partitions
+        reverse_partition = defaultdict(list)
+        for original_node, resulting_node in part.items():
+            reverse_partition[resulting_node].append(original_node)
+        evidence = 0
+        for node, contributing_nodes in reverse_partition.items():
+            if node.get_prefix_output() is None:
+                continue  # No evidence whatsoever
+            evidence -= 1  # subtract self-comparison
+            for contributing_node in contributing_nodes:
+                if contributing_node.get_prefix_output() is not None:
+                    evidence += 1
+        return evidence
 
     score = ScoreCalculation(score_function=EDSM_score)
 
