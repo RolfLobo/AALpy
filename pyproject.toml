@@ -7,7 +7,7 @@ name = "aalpy"
 version = "1.6.2"
 description = "An active automata learning library"
 readme = "README.md"
-requires-python = ">=3.6"
+requires-python = ">=3.10"
 license = { text = "MIT" }
 authors = [
 { name = "Edi Muskardin" }
@@ -30,3 +30,7 @@ license-files = ["LICENSE.txt"]
 
 [tool.setuptools.packages.find]
 include = ["aalpy*"]
+
+# pip install build twine
+# python -m build
+# python -m twine upload dist/*

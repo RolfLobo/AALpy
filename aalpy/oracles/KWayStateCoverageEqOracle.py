@@ -1,6 +1,8 @@
+# Equivalence oracle that covers k-wise combinations/permutations of states with a trailing random walk.
 from random import choices, shuffle
 
 from aalpy.base import Oracle, SUL
+from aalpy.base.Automaton import Automaton
 from itertools import combinations, permutations
 
 
@@ -10,22 +12,22 @@ class KWayStateCoverageEqOracle(Oracle):
     random walk at the end.
     """
 
-    def __init__(self, alphabet: list, sul: SUL, k=2, random_walk_len=20,
-                 method='permutations',
-                 num_test_lower_bound=None,
-                 num_test_upper_bound=None):
+    def __init__(self, alphabet: list, sul: SUL, k: int = 2, random_walk_len: int = 20,
+                 method: str = 'permutations',
+                 num_test_lower_bound: int | None = None,
+                 num_test_upper_bound: int | None = None) -> None:
         """
+        Constructs the oracle.
 
-        Args:
-
-            alphabet: input alphabet
-            sul: system under learning
-            k: k value used for k-wise combinations/permutations of states
-            random_walk_len: length of random walk performed at the end of each combination/permutation
-            method: either 'combinations' or 'permutations'
-            num_test_lower_bound= either None or number a minimum number of test-cases to be performed in each testing round
-            num_test_upper_bound= either None or number a maximum number of test-cases to be performed in each testing round
-
+        :param list alphabet: Input alphabet.
+        :param SUL sul: System under learning.
+        :param int k: k value used for k-wise combinations/permutations of states.
+        :param int random_walk_len: Length of random walk performed at the end of each combination/permutation.
+        :param str method: Either 'combinations' or 'permutations'.
+        :param int | None num_test_lower_bound: Either None or a minimum number of test-cases to be performed in
+            each testing round.
+        :param int | None num_test_upper_bound: Either None or a maximum number of test-cases to be performed in
+            each testing round.
         """
         super().__init__(alphabet, sul)
         assert k > 1 and method in ['combinations', 'permutations']
@@ -37,8 +39,14 @@ class KWayStateCoverageEqOracle(Oracle):
         self.num_test_lower_bound = num_test_lower_bound
         self.num_test_upper_bound = num_test_upper_bound
 
-    def find_cex(self, hypothesis):
+    def find_cex(self, hypothesis: Automaton) -> tuple | None:
+        """
+        Generates and executes test cases covering k-wise state combinations/permutations until a counterexample
+        is found.
 
+        :param Automaton hypothesis: Current hypothesis.
+        :return tuple | None: Counterexample inputs, None if no counterexample is found.
+        """
         shuffle(hypothesis.states)
 
         test_cases = []
