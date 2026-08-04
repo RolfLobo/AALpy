@@ -1,9 +1,14 @@
+# Core implementation of the Generalized State Merging (GSM) algorithm: a red-blue
+# state-merging framework used to passively learn deterministic, nondeterministic and
+# stochastic automata from data.
 import functools
 from collections import deque
-from typing import Dict, Tuple, Callable, List, Optional
+from collections.abc import Callable
+from typing import Any
 
+from aalpy.base import Automaton
 from aalpy.learning_algs.general_passive.GsmNode import GsmNode, OutputBehavior, TransitionBehavior, TransitionInfo, \
-    OutputBehaviorRange, TransitionBehaviorRange, intersection_iterator, unknown_output, detect_data_format
+    OutputBehaviorRange, TransitionBehaviorRange, DataFormat, intersection_iterator, unknown_output, detect_data_format
 from aalpy.learning_algs.general_passive.ScoreFunctionsGSM import ScoreCalculation, hoeffding_compatibility
 
 
@@ -11,35 +16,75 @@ from aalpy.learning_algs.general_passive.ScoreFunctionsGSM import ScoreCalculati
 #  Easiest done by adding a new method / field to ScoreCalculation
 
 class Partitioning:
-    def __init__(self, red: GsmNode, blue: GsmNode):
+    """Represents the tentative result of merging a blue node into a red node, plus the resulting node mapping."""
+
+    def __init__(self, red: GsmNode, blue: GsmNode) -> None:
+        """
+        Create a (not yet scored) partitioning for the merge of blue into red.
+
+        :param GsmNode red: Red (already accepted) node the merge targets.
+        :param GsmNode blue: Blue (candidate) node being merged.
+        """
         self.red: GsmNode = red
         self.blue: GsmNode = blue
         self.score = False
-        self.red_mapping: Dict[GsmNode, GsmNode] = dict()
-        self.full_mapping: Dict[GsmNode, GsmNode] = dict()
+        self.red_mapping: dict[GsmNode, GsmNode] = dict()
+        self.full_mapping: dict[GsmNode, GsmNode] = dict()
 
 
 class Instrumentation:
-    def __init__(self):
+    """Base class for hooks that observe/report on the progress of GeneralizedStateMerging.run."""
+
+    def __init__(self) -> None:
+        """
+        Create an instrumentation instance. No state by default.
+        """
         pass
 
-    def reset(self, gsm: 'GeneralizedStateMerging'):
+    def reset(self, gsm: 'GeneralizedStateMerging') -> None:
+        """
+        Called once at the start of a learning run.
+
+        :param GeneralizedStateMerging gsm: The GSM instance being run.
+        """
         pass
 
-    def pta_construction_done(self, root: GsmNode):
+    def pta_construction_done(self, root: GsmNode) -> None:
+        """
+        Called after the initial PTA has been constructed.
+
+        :param GsmNode root: Root node of the constructed PTA.
+        """
         pass
 
-    def log_promote(self, node: GsmNode):
+    def log_promote(self, node: GsmNode) -> None:
+        """
+        Called whenever a blue node is promoted to red.
+
+        :param GsmNode node: The promoted node.
+        """
         pass
 
-    def log_merge(self, part: Partitioning):
+    def log_merge(self, part: Partitioning) -> None:
+        """
+        Called whenever a merge is performed.
+
+        :param Partitioning part: The partitioning describing the performed merge.
+        """
         pass
 
-    def learning_done(self, root: GsmNode):
+    def learning_done(self, root: GsmNode) -> None:
+        """
+        Called once learning has finished.
+
+        :param GsmNode root: Root node of the learned model.
+        """
         pass
 
 
 class GeneralizedStateMerging:
+    """Implements the red-blue state-merging framework used to passively learn automata from data."""
+
     def __init__(self, *,
                  output_behavior: OutputBehavior = "moore",
                  transition_behavior: TransitionBehavior = "deterministic",
@@ -49,8 +94,22 @@ class GeneralizedStateMerging:
                  compatibility_on_pta: bool = False,
                  compatibility_on_futures: bool = False,
                  node_order: Callable[[GsmNode, GsmNode], bool] = None,
-                 consider_only_min_blue=False,
-                 depth_first=False):
+                 consider_only_min_blue: bool = False,
+                 depth_first: bool = False) -> None:
+        """
+        Configure a GeneralizedStateMerging instance.
+
+        :param OutputBehavior output_behavior: Either "moore" or "mealy".
+        :param TransitionBehavior transition_behavior: Either "deterministic", "nondeterministic" or "stochastic".
+        :param ScoreCalculation score_calc: Local compatibility / global score calculation to use.
+        :param Callable[[GsmNode], GsmNode] pta_preprocessing: Pre-processing function applied to the constructed PTA.
+        :param Callable[[GsmNode], GsmNode] postprocessing: Post-processing function applied to the learned model.
+        :param bool compatibility_on_pta: Whether compatibility is evaluated on the PTA instead of the current hypothesis.
+        :param bool compatibility_on_futures: Whether compatibility is evaluated on futures instead of full partitions.
+        :param Callable[[GsmNode, GsmNode], bool] node_order: Order in which merge candidates are considered.
+        :param bool consider_only_min_blue: Whether to only consider the minimal blue node in each round.
+        :param bool depth_first: Whether compatibility is checked depth-first instead of breadth-first.
+        """
 
         if output_behavior not in OutputBehaviorRange:
             raise ValueError(f"invalid output behavior {output_behavior}. should be in {OutputBehaviorRange}")
@@ -82,7 +141,14 @@ class GeneralizedStateMerging:
         self.consider_only_min_blue = consider_only_min_blue
         self.depth_first = depth_first
 
-    def compute_local_compatibility(self, a: GsmNode, b: GsmNode):
+    def compute_local_compatibility(self, a: GsmNode, b: GsmNode) -> bool:
+        """
+        Check whether two nodes are locally compatible, considering output/transition behavior and the score calculation.
+
+        :param GsmNode a: First node.
+        :param GsmNode b: Second node.
+        :return bool: True if the nodes are locally compatible.
+        """
         if self.output_behavior == "moore" and not GsmNode.moore_compatible(a, b):
             return False
         if self.transition_behavior == "deterministic" and not GsmNode.deterministic_compatible(a, b):
@@ -91,7 +157,17 @@ class GeneralizedStateMerging:
 
     # TODO: make more generic by adding the option to use a different algorithm than red blue
     #  for selecting potential merge candidates. Maybe using inheritance with abstract `run`.
-    def run(self, data, convert=True, instrumentation: Instrumentation=None, data_format=None):
+    def run(self, data: Any, convert: bool = True, instrumentation: Instrumentation | None = None,
+            data_format: DataFormat | None = None) -> Automaton | GsmNode:
+        """
+        Run the state-merging algorithm on the provided data.
+
+        :param Any data: Learning data, in one of the supported data formats (or already a GsmNode tree).
+        :param bool convert: Whether to convert the resulting GsmNode tree into a concrete AALpy automaton.
+        :param Instrumentation | None instrumentation: Instrumentation object used to report progress, defaults to a no-op instance.
+        :param DataFormat | None data_format: Explicit data format of `data`, or None to auto-detect.
+        :return Automaton | GsmNode: The learned automaton (if convert is True) or the raw GsmNode tree.
+        """
         if instrumentation is None:
             instrumentation = Instrumentation()
         instrumentation.reset(self)
@@ -115,7 +191,7 @@ class GeneralizedStateMerging:
         # sorted list of states already considered
         red_states = [root]
 
-        partition_candidates: Dict[Tuple[GsmNode, GsmNode], Partitioning] = dict()
+        partition_candidates: dict[tuple[GsmNode, GsmNode], Partitioning] = dict()
         while True:
             # sort states. states are always sorted using default order on original prefix
             if self.node_order is not GsmNode.default_order:
@@ -147,7 +223,7 @@ class GeneralizedStateMerging:
                 # FUTURE: Save partitions?
 
                 # calculate partitions resulting from merges with red states if necessary
-                current_candidates: Dict[GsmNode, Partitioning] = dict()
+                current_candidates: dict[GsmNode, Partitioning] = dict()
                 perfect_partitioning = None
                 red_state = None
                 for red_state in red_states:
@@ -200,7 +276,14 @@ class GeneralizedStateMerging:
         return root
 
     def _check_futures(self, red: GsmNode, blue: GsmNode) -> bool:
-        q: deque[Tuple[GsmNode, GsmNode]] = deque([(red, blue)])
+        """
+        Check compatibility of the futures of two nodes, without constructing a full partition.
+
+        :param GsmNode red: Red (already accepted) node.
+        :param GsmNode blue: Blue (candidate) node.
+        :return bool: True if all reachable node pairs are locally compatible.
+        """
+        q: deque[tuple[GsmNode, GsmNode]] = deque([(red, blue)])
         pop = q.pop if self.depth_first else q.popleft
 
         while len(q) != 0:
@@ -221,9 +304,15 @@ class GeneralizedStateMerging:
         return True
 
     def _partition_from_merge(self, red: GsmNode, blue: GsmNode) -> Partitioning:
-        # Compatibility check based on partitions.
-        # assumes that blue is a tree and red is not reachable from blue
+        """
+        Compute the partitioning resulting from merging blue into red, including its score.
 
+        Assumes that blue is a tree and red is not reachable from blue.
+
+        :param GsmNode red: Red (already accepted) node the merge targets.
+        :param GsmNode blue: Blue (candidate) node being merged.
+        :return Partitioning: The resulting partitioning (with score False if incompatible).
+        """
         partitioning = Partitioning(red, blue)
 
         self.score_calc.reset()
@@ -234,10 +323,10 @@ class GeneralizedStateMerging:
 
         # when compatibility is determined only by future and scores are disabled, we need not create partitions.
         if self.compatibility_on_futures and not self.score_calc.has_score_function():
-            def update_partition(red_node: GsmNode, blue_node: Optional[GsmNode]) -> GsmNode:
+            def update_partition(red_node: GsmNode, blue_node: GsmNode | None) -> GsmNode:
                 return red_node
         else:
-            def update_partition(red_node: GsmNode, blue_node: Optional[GsmNode]) -> GsmNode:
+            def update_partition(red_node: GsmNode, blue_node: GsmNode | None) -> GsmNode:
                 p = partitioning.full_mapping.get(red_node) # could check smaller .red_mapping?
                 if p is None:
                     p = red_node.shallow_copy()
@@ -257,7 +346,7 @@ class GeneralizedStateMerging:
             partition.resolve_unknown_prefix_output(blue_out_sym)
 
         # loop over implied merges
-        q: deque[Tuple[GsmNode, GsmNode]] = deque([(red, blue)])
+        q: deque[tuple[GsmNode, GsmNode]] = deque([(red, blue)])
         pop = q.pop if self.depth_first else q.popleft
         while len(q) != 0:
             red, blue = pop()
@@ -310,45 +399,30 @@ def run_GSM(data: list, *,
             compatibility_on_pta: bool = False,
             compatibility_on_futures: bool = False,
             node_order: Callable[[GsmNode, GsmNode], bool] = None,
-            consider_only_min_blue=False,
-            depth_first=False,
-            instrumentation=None,
-            convert=True,
-            data_format=None,
-            ):
+            consider_only_min_blue: bool = False,
+            depth_first: bool = False,
+            instrumentation: Instrumentation | None = None,
+            convert: bool = True,
+            data_format: DataFormat | None = None,
+            ) -> Automaton | GsmNode:
     """
     Performs a state merging algorithm in the red-blue framework on provided data.
 
-    Args:
-        data: Data used for learning. Recorded behavior of the system.
-
-        output_behavior: Specifies whether outputs are emitted by states ("moore") or transitions ("mealy").
-
-        transition_behavior: Either "deterministic", "nondeterministic" or "stochastic".
-
-        score_calc: A ScoreCalculation object which determines how compatibility and merge scores are calculated.
-
-        pta_preprocessing: A pre-processing function applied to the PTA.
-
-        postprocessing: A postprocessing function applied to the learned automaton.
-
-        compatibility_on_pta: Whether compatibility is evaluated on the PTA or the current hypothesis.
-
-        compatibility_on_futures: Whether compatibility is evaluated using the futures of both states or all partition information.
-
-        node_order: Order in which merge candidates are considered. Defaults to short-lex.
-
-        consider_only_min_blue: Whether to consider merge candidates from all blue nodes or just a single.
-
-        depth_first: Whether compatibility is checked depth- or breadth-first.
-
-        instrumentation: Instrumentation object for reporting progress or debugging.
-
-        convert: Whether to return a normal AALpy automaton type or a `GsmNode` object (internal representation).
-
-        data_format: Whether the input is given in the form of input-output traces or labeled input traces.
-
-    Returns: The learned automaton.
+    :param list data: Data used for learning. Recorded behavior of the system.
+    :param OutputBehavior output_behavior: Specifies whether outputs are emitted by states ("moore") or transitions ("mealy").
+    :param TransitionBehavior transition_behavior: Either "deterministic", "nondeterministic" or "stochastic".
+    :param ScoreCalculation score_calc: A ScoreCalculation object which determines how compatibility and merge scores are calculated.
+    :param Callable[[GsmNode], GsmNode] pta_preprocessing: A pre-processing function applied to the PTA.
+    :param Callable[[GsmNode], GsmNode] postprocessing: A postprocessing function applied to the learned automaton.
+    :param bool compatibility_on_pta: Whether compatibility is evaluated on the PTA or the current hypothesis.
+    :param bool compatibility_on_futures: Whether compatibility is evaluated using the futures of both states or all partition information.
+    :param Callable[[GsmNode, GsmNode], bool] node_order: Order in which merge candidates are considered. Defaults to short-lex.
+    :param bool consider_only_min_blue: Whether to consider merge candidates from all blue nodes or just a single.
+    :param bool depth_first: Whether compatibility is checked depth- or breadth-first.
+    :param Instrumentation | None instrumentation: Instrumentation object for reporting progress or debugging.
+    :param bool convert: Whether to return a normal AALpy automaton type or a `GsmNode` object (internal representation).
+    :param DataFormat | None data_format: Whether the input is given in the form of input-output traces or labeled input traces.
+    :return Automaton | GsmNode: The learned automaton.
     """
     # instantiate gsm
     gsm = GeneralizedStateMerging(
