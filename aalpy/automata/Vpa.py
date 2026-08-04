@@ -186,6 +186,25 @@ class Vpa(Automaton):
 
         return self.current_state.is_accepting and self.stack == []
 
+    def execute_sequence(self, origin_state: VpaState, seq: list[str], stack: list) -> list[bool]:
+        """
+        Executes an input sequence on the VPA starting from a given state and stack configuration.
+
+        A VPA's actual configuration is the pair (state, stack), not just the state, since the stack is
+        what makes call/return symbols visibly balanced. The generic Automaton.execute_sequence only
+        resets current_state, so it cannot start from a well-defined configuration on its own; stack is
+        therefore a required parameter here rather than defaulted, so callers always state explicitly
+        which configuration they mean to start from (pass [] to start fresh from origin_state).
+
+        :param VpaState origin_state: State from which the sequence execution starts.
+        :param list[str] seq: Input sequence to execute.
+        :param list stack: Stack content to start from.
+        :return list[bool]: The output response for the executed sequence.
+        """
+        self.current_state = origin_state
+        self.stack = list(stack)
+        return [self.step(s) for s in seq]
+
     def to_state_setup(self) -> dict:
         """
         Converts the VPA to a state setup dictionary.
@@ -200,7 +219,8 @@ class Vpa(Automaton):
         sorted_states = sorted(self.states, key=lambda x: len(x.prefix) if x.prefix is not None else len(self.states))
         for s in sorted_states:
             state_setup_dict[s.state_id] = (
-                s.is_accepting, {k: (v.target_state.state_id, v.action) for k, v in s.transitions.items()})
+                s.is_accepting,
+                {k: [(t.target_state.state_id, t.action, t.stack_guard) for t in v] for k, v in s.transitions.items()})
 
         return state_setup_dict
 
