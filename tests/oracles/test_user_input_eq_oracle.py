@@ -1,8 +1,9 @@
+import importlib
 import unittest
 from unittest.mock import patch
 
 from aalpy.automata import MealyMachine, MealyState
-from aalpy.oracles import UserInputEqOracle
+from aalpy.oracles.UserInputEqOracle import UserInputEqOracle
 from aalpy.SULs import AutomatonSUL
 
 
@@ -22,7 +23,8 @@ def sample_mealy():
 class UserInputEqOracleTests(unittest.TestCase):
 
     def setUp(self):
-        self.visualize_patcher = patch('aalpy.oracles.UserInputEqOracle.visualize_automaton')
+        module = importlib.import_module("aalpy.oracles.UserInputEqOracle")
+        self.visualize_patcher = patch.object(module, "visualize_automaton")
         self.visualize_patcher.start()
 
     def tearDown(self):
