@@ -44,7 +44,7 @@ class TomitaSUL(SUL):
         :param str letter: Single element of the input alphabet.
         :return bool: Whether the current string (previous string + letter) is accepted by the grammar.
         """
-        if input:
+        if letter is not None:
             self.string += str(letter)
         return self.tomita_level(self.string)
 

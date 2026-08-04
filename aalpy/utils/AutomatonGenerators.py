@@ -481,7 +481,7 @@ def generate_random_sevpa(num_states: int, internal_alphabet_size: int, call_alp
 
     for state in states:
         for internal_letter in internal_alphabet:
-            if state.transitions[internal_letter] is None:
+            if not state.transitions[internal_letter]:
                 target_state = random.choice(states)
                 state.transitions[internal_letter].append(
                     SevpaTransition(target_state, internal_letter, None, None))

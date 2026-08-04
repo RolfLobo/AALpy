@@ -57,9 +57,12 @@ class RandomWordSampler(Sampler):
             walk_len = randint(self.min_walk_len, self.max_walk_len)
             random_walk = tuple(choice(input_al) for _ in range(walk_len))
 
+            # the SUL's initial output (before any input) must be queried separately: sul.query(random_walk)
+            # returns exactly one output per input in random_walk, none of which is the initial output
+            initial_output = sul.query(())[0]
             outputs = sul.query(random_walk)
 
-            sample = [outputs.pop(0)]
+            sample = [initial_output]
             for i in range(len(outputs)):
                 sample.append((random_walk[i], outputs[i]))
 
@@ -90,7 +93,7 @@ def run_active_Alergia(data: list, sul: SUL, sampler: Sampler, n_iter: int, eps:
     for i in range(n_iter):
         if print_info:
             print(f'Active Alergia Iteration: {i}')
-        model = run_Alergia(data, automaton_type='mdp', eps=eps, compatibility_checker=compatibility_checker)
+        model = run_Alergia(data, automaton_type=automaton_type, eps=eps, compatibility_checker=compatibility_checker)
 
         new_samples = sampler.sample(sul, model)
         data.extend(new_samples)
