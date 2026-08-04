@@ -31,9 +31,11 @@ class NDMooreMachine(Automaton[NDMooreState[InputType, OutputType]]):
     non-deterministically.
     """
 
-    def to_state_setup(self) -> None:
+    def to_state_setup(self) -> dict:
         """
-        Builds a state setup dictionary for the non-deterministic Moore machine.
+        Converts the non-deterministic Moore machine to a state setup dictionary.
+
+        :return dict: Map from state_id to tuple(output, transitions_dict).
         """
         state_setup = dict()
 
@@ -52,6 +54,8 @@ class NDMooreMachine(Automaton[NDMooreState[InputType, OutputType]]):
             if state is self.initial_state:
                 continue
             set_dict_entry(state)
+
+        return state_setup
 
     @staticmethod
     def from_state_setup(state_setup: dict, **kwargs) -> 'NDMooreMachine':
