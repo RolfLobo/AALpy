@@ -163,6 +163,8 @@ def is_suffix_of(suffix: tuple, trace: tuple) -> bool:
     :param tuple trace: Trace in question.
     :return bool: True if suffix is the suffix of trace.
     """
+    if len(suffix) == 0:
+        return True
     if len(trace) < len(suffix):
         return False
     else:

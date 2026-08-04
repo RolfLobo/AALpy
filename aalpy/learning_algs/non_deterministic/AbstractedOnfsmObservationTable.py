@@ -53,6 +53,9 @@ class AbstractedNonDetObservationTable:
         :param list[tuple] | None e_set: Suffixes of E set on which to perform membership queries.
         """
 
+        if s_set is None:
+            s_set = self.S + self.S_dot_A
+
         self.observation_table.query_missing_observations(s_set, e_set)
         self.abstract_obs_table()
         self.clean_obs_table()
@@ -228,14 +231,21 @@ class AbstractedNonDetObservationTable:
 
         return None
 
-    def update_E(self, seq: tuple) -> None:
+    def update_E(self, seq: tuple) -> list[tuple]:
         """
         Adds a suffix to the E set if not already present.
 
         :param tuple seq: Suffix to add.
+        :return list[tuple]: The newly added suffix as a single-element list, or an empty list if it was
+            already present. The caller (run_abstracted_ONFSM_Lstar) passes this straight on as the
+            e_set of update_obs_table(), so it must not be None/omitted - without a return statement
+            here it was always None, silently making update_obs_table() query every column of E instead
+            of just the new one.
         """
         if seq not in self.E:
             self.E.append(seq)
+            return [seq]
+        return []
 
     def clean_obs_table(self) -> None:
         """
@@ -254,16 +264,17 @@ class AbstractedNonDetObservationTable:
         for s in tmp_S:
             hashed_s_row = self.row_to_hashable(s)
             if hashed_s_row in hashed_rows_from_s:
+                # self.S is the very same list object as self.observation_table.S (aliased in
+                # abstract_obs_table), so removing from one already removes from the other -
+                # calling .remove() on both raised ValueError: x not in list on the second call.
                 if s in self.S:
                     self.S.remove(s)
-                    self.observation_table.S.remove(s)
                 size = len(s[0])
                 for row_prefix in tmp_both_S:
                     s_both_row = (row_prefix[0][:size], row_prefix[1][:size])
                     if s != row_prefix and s == s_both_row:
                         if row_prefix in self.S:
                             self.S.remove(row_prefix)
-                            self.observation_table.S.remove(s)
             else:
                 hashed_rows_from_s.add(hashed_s_row)
 
