@@ -311,7 +311,8 @@ def transform_score(score: Any, transform: Callable) -> Any:
     if isinstance(score, Callable):
         return lambda *args: transform(score(*args))
     if isinstance(score, ScoreCalculation):
-        score.score_function = lambda *args: transform(score.score_function(*args))
+        original_score_function = score.score_function
+        score.score_function = lambda *args: transform(original_score_function(*args))
         return score
     return transform(score)
 

@@ -22,7 +22,8 @@ def get_io_traces(automaton: Automaton, input_traces: list) -> list:
 
     traces = []
     for input_trace in input_traces:
-        output_trace = automaton.execute_sequence(automaton.initial_state, input_trace)
+        output_trace = automaton.execute_sequence(automaton.initial_state, input_trace) if input_trace else []
+
         trace = list(zip(input_trace, output_trace))
         if is_moore:
             trace = [automaton.initial_state.output] + trace
