@@ -192,10 +192,11 @@ def extract_unique_sequences(root_node: RpniNode, automaton_type: str) -> list[l
         seq = [] if automaton_type == 'mealy' else [root_node.output]
         curr_node = root_node
         for i in node.prefix:
-            curr_node = curr_node.children[i]
             if automaton_type == 'mealy':
                 seq.append((i, curr_node.output.get(i)))
+                curr_node = curr_node.children[i]
             else:
+                curr_node = curr_node.children[i]
                 seq.append((i, curr_node.output))
         paths.append(seq)
 

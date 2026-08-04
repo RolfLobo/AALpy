@@ -232,6 +232,9 @@ class ObservationTree:
                 current_node = current_node.get_successor(input_val)
             else:
                 current_node = current_node.get_successor(input_val)
+                if current_node is None:
+                    return None
+
                 output = current_node.output
             if output is None:
                 return None
@@ -252,12 +255,17 @@ class ObservationTree:
         for input_val in inputs:
             if self.automaton_type == 'mealy':
                 output = current_node.get_output(input_val)
+                current_node = current_node.get_successor(input_val)
             else:
+                current_node = current_node.get_successor(input_val)
+                if current_node is None:
+                    return None
+
                 output = current_node.output
+
             if output is None:
                 return None
             observation.append(output)
-            current_node = current_node.get_successor(input_val)
 
         return observation
 
@@ -525,6 +533,19 @@ class ObservationTree:
             next_input = ads.next_input(prev_output)
             if next_input is None:
                 break
+
+            # For DFA/Moore, the root of an Ads is labelled with the tuple() sentinel (see
+            # Ads.construct_ads): it splits the block on the states' own output, without sending an
+            # actual input. Previously this branch was missing here (unlike in
+            # SUL.adaptive_query, which does handle it), so current_node.get_successor(tuple())
+            # always returned None and this method always reported "cannot answer from tree" for
+            # DFA/Moore -- even when the tree already had the answer -- forcing a real SUL query on
+            # every single ADS-based extension/separation step. Mirror adaptive_query's handling:
+            # just read the node's own output without moving to a successor or recording an input.
+            if next_input == tuple() and self.automaton_type != 'mealy':
+                prev_output = outputs_received[-1] if outputs_received else current_node.output
+                continue
+
             inputs_sent.append(next_input)
 
             if self.automaton_type == 'mealy':
