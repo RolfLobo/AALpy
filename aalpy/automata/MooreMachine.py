@@ -2,6 +2,7 @@
 from collections.abc import Hashable
 from typing import Generic
 
+from aalpy.automata.Dfa import Dfa, DfaState
 from aalpy.base import AutomatonState, DeterministicAutomaton
 from aalpy.base.Automaton import InputType, OutputType
 
@@ -150,15 +151,13 @@ class MooreMachine(DeterministicAutomaton[MooreState[InputType, OutputType]]):
         return mm
 
     @staticmethod
-    def to_dfa(moore_machine: 'MooreMachine') -> 'Dfa':
+    def to_dfa(moore_machine: 'MooreMachine') -> Dfa:
         """
         Converts a Moore machine with boolean state outputs to a DFA.
 
         :param MooreMachine moore_machine: Moore machine to convert. All states must have boolean outputs.
         :return Dfa: The equivalent DFA.
         """
-        from aalpy.automata.Dfa import Dfa, DfaState
-
         if not all(isinstance(state.output, bool) for state in moore_machine.states):
             raise ValueError('Only Moore machines with boolean state outputs can be cast to a Dfa.')
 

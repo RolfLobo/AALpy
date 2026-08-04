@@ -3,6 +3,7 @@
 from abc import ABC, abstractmethod
 from random import randint, choice
 
+from aalpy.automata import Mdp
 from aalpy.base import SUL
 from aalpy.learning_algs import run_Alergia
 from aalpy.learning_algs.stochastic_passive.CompatibilityChecker import CompatibilityChecker
@@ -14,7 +15,7 @@ class Sampler(ABC):
     """
 
     @abstractmethod
-    def sample(self, sul: SUL, model: 'Mdp') -> list:
+    def sample(self, sul: SUL, model: Mdp) -> list:
         """
         Abstract method implementing sampling strategy.
 
@@ -42,7 +43,7 @@ class RandomWordSampler(Sampler):
         self.min_walk_len = min_walk_len
         self.max_walk_len = max_walk_len
 
-    def sample(self, sul: SUL, model: 'Mdp') -> list:
+    def sample(self, sul: SUL, model: Mdp) -> list:
         """
         Samples num_walks random walks of random length over the current hypothesis' input alphabet.
 
@@ -73,7 +74,7 @@ class RandomWordSampler(Sampler):
 
 def run_active_Alergia(data: list, sul: SUL, sampler: Sampler, n_iter: int, eps: float | str = 0.05,
                         compatibility_checker: CompatibilityChecker | None = None, automaton_type: str = 'mdp',
-                        print_info: bool = True) -> 'Mdp':
+                        print_info: bool = True) -> Mdp:
     """
     Active version of IOAlergia algorithm. Based on intermediate hypothesis sampling on the system is performed.
     Sampled data is added to the learning data and more accurate model is learned.

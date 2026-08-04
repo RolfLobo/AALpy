@@ -1,13 +1,14 @@
 # Hand-crafted example automata and systems under learning used throughout benchmarks, examples and tests.
 from typing import Any
 
+from aalpy.automata import Dfa, Onfsm, OnfsmState, Mdp, MdpState, StochasticMealyMachine, StochasticMealyState
+from aalpy.base import SUL
 
-def get_Angluin_dfa() -> 'Dfa':
+
+def get_Angluin_dfa() -> Dfa:
     """
     :return Dfa: The classical DFA example used by Angluin to illustrate L*.
     """
-    from aalpy.automata import Dfa
-
     angluin_dfa = {
         'q0': (True, {'a': 'q1', 'b': 'q2'}),
         'q1': (False, {'a': 'q0', 'b': 'q3'}),
@@ -18,15 +19,13 @@ def get_Angluin_dfa() -> 'Dfa':
     return Dfa.from_state_setup(angluin_dfa)
 
 
-def get_benchmark_ONFSM() -> 'Onfsm':
+def get_benchmark_ONFSM() -> Onfsm:
     """
     Returns ONFSM presented in 'Learning Finite State Models of Observable Nondeterministic Systems in a Testing
     Context'.
 
     :return Onfsm: The example ONFSM.
     """
-    from aalpy.automata import Onfsm, OnfsmState
-
     a = OnfsmState('q0')
     b = OnfsmState('q1')
     c = OnfsmState('g2')
@@ -49,14 +48,12 @@ def get_benchmark_ONFSM() -> 'Onfsm':
     return Onfsm(a, [a, b, c, d])
 
 
-def get_ONFSM() -> 'Onfsm':
+def get_ONFSM() -> Onfsm:
     """
     Returns example of an ONFSM.
 
     :return Onfsm: The example ONFSM.
     """
-    from aalpy.automata import Onfsm, OnfsmState
-
     q0 = OnfsmState('q0')
     q1 = OnfsmState('q1')
     q2 = OnfsmState('q2')
@@ -97,12 +94,10 @@ def get_ONFSM() -> 'Onfsm':
     return Onfsm(q0, [q0, q1, q2, q3, q4, q5, q6, q7, q8])
 
 
-def get_faulty_coffee_machine_MDP() -> 'Mdp':
+def get_faulty_coffee_machine_MDP() -> Mdp:
     """
     :return Mdp: An MDP modeling a coffee machine that occasionally serves coffee without the beep step.
     """
-    from aalpy.automata import Mdp, MdpState
-
     q0 = MdpState("q0", "init")
     q1 = MdpState("q1", "beep")
     q2 = MdpState("q2", "coffee")
@@ -120,12 +115,10 @@ def get_faulty_coffee_machine_MDP() -> 'Mdp':
     return mdp
 
 
-def get_weird_coffee_machine_MDP() -> 'Mdp':
+def get_weird_coffee_machine_MDP() -> Mdp:
     """
     :return Mdp: An MDP modeling a coffee machine with an alternate 'koin' input path that can crash the machine.
     """
-    from aalpy.automata import Mdp, MdpState
-
     q0 = MdpState("q0", "init")
     q1 = MdpState("q1", "beep")
     q2 = MdpState("q2", "coffee")
@@ -171,13 +164,11 @@ def get_weird_coffee_machine_MDP() -> 'Mdp':
     return mdp
 
 
-def get_faulty_coffee_machine_SMM() -> 'StochasticMealyMachine':
+def get_faulty_coffee_machine_SMM() -> StochasticMealyMachine:
     """
     :return StochasticMealyMachine: A stochastic Mealy machine modeling a coffee machine that occasionally serves
         coffee without the beep step.
     """
-    from aalpy.automata import StochasticMealyMachine, StochasticMealyState
-
     s0 = StochasticMealyState('q0')
     s1 = StochasticMealyState('q1')
     s2 = StochasticMealyState('q2')
@@ -195,12 +186,10 @@ def get_faulty_coffee_machine_SMM() -> 'StochasticMealyMachine':
     return smm
 
 
-def get_minimal_faulty_coffee_machine_SMM() -> 'StochasticMealyMachine':
+def get_minimal_faulty_coffee_machine_SMM() -> StochasticMealyMachine:
     """
     :return StochasticMealyMachine: A minimal 2-state stochastic Mealy machine modeling the faulty coffee machine.
     """
-    from aalpy.automata import StochasticMealyMachine, StochasticMealyState
-
     s0 = StochasticMealyState('q0')
     s1 = StochasticMealyState('q1')
 
@@ -215,12 +204,10 @@ def get_minimal_faulty_coffee_machine_SMM() -> 'StochasticMealyMachine':
     return smm
 
 
-def get_faulty_mqtt_SMM() -> 'StochasticMealyMachine':
+def get_faulty_mqtt_SMM() -> StochasticMealyMachine:
     """
     :return StochasticMealyMachine: A stochastic Mealy machine modeling a faulty MQTT broker.
     """
-    from aalpy.automata import StochasticMealyMachine, StochasticMealyState
-
     s0 = StochasticMealyState('q0')
     s1 = StochasticMealyState('q1')
     s2 = StochasticMealyState('q2')
@@ -250,13 +237,11 @@ def get_faulty_mqtt_SMM() -> 'StochasticMealyMachine':
     return smm
 
 
-def get_small_gridworld() -> 'StochasticMealyMachine':
+def get_small_gridworld() -> StochasticMealyMachine:
     """
     :return StochasticMealyMachine: A stochastic Mealy machine modeling a small 2x2 gridworld with mud and grass
         tiles.
     """
-    from aalpy.automata import StochasticMealyMachine, StochasticMealyState
-
     s0 = StochasticMealyState('q0')
     s1 = StochasticMealyState('q1')
     s2 = StochasticMealyState('q2')
@@ -429,12 +414,10 @@ class DateValidator:
         return True
 
 
-def get_small_pomdp() -> 'Mdp':
+def get_small_pomdp() -> Mdp:
     """
     :return Mdp: An MDP with partially observable states (a small POMDP-like example).
     """
-    from aalpy.automata import Mdp, MdpState
-
     q0 = MdpState("q0", "init")
     q1 = MdpState("q1", "beep")
     q2 = MdpState("q2", "beep")
@@ -490,7 +473,7 @@ def is_balanced(test_string: str, call_return_map: dict, allow_empty_string: boo
     return not stack if allow_empty_string else not stack and len(test_string) > 0
 
 
-def get_balanced_string_sul(call_return_map: dict, allow_empty_string: bool) -> 'SUL':
+def get_balanced_string_sul(call_return_map: dict, allow_empty_string: bool) -> SUL:
     """
     Creates a SUL that accepts balanced strings of call/return symbols.
 
@@ -498,8 +481,6 @@ def get_balanced_string_sul(call_return_map: dict, allow_empty_string: bool) -> 
     :param bool allow_empty_string: Whether an empty string counts as balanced.
     :return SUL: The constructed SUL.
     """
-    from aalpy.base import SUL
-
     class BalancedStringSUL(SUL):
         """
         System under learning that checks whether the sequence of inputs seen so far is a balanced string.
