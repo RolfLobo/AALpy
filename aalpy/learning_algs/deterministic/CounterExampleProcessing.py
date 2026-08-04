@@ -121,8 +121,6 @@ def linear_cex_processing(sul: SUL, cex: tuple, hypothesis, suffix_closedness: b
     """
     assert direction in {'fwd', 'bwd'}
 
-    direction = 'fwd'
-
     distinguishing_suffix = None
     previous_output = None
 
