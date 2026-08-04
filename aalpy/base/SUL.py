@@ -146,7 +146,7 @@ class CacheSUL(SUL):
         cached_query = self.cache.in_cache(word)
         if cached_query:
             self.num_cached_queries += 1
-            return cached_query
+            return list(cached_query)
 
         # get outputs using default query method
         out = self.sul.query(word)
