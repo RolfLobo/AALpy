@@ -76,9 +76,10 @@ class KWayStateCoverageEqOracle(Oracle):
             path += tuple(choices(self.alphabet, k=self.random_walk_len))
             test_cases.append(path)
 
-        # lower bound (also accounts for single state hypothesis when a lower bound is not defined)
+        # lower bound (also accounts for hypotheses with fewer states than k, where no k-wise
+        # combination/permutation exists at all, so test_cases would otherwise stay empty)
         lower_bound = self.num_test_lower_bound
-        if len(hypothesis.states) == 1 and lower_bound is None:
+        if len(hypothesis.states) < self.k and lower_bound is None:
             lower_bound = 50
 
         while lower_bound is not None and len(test_cases) < lower_bound:
